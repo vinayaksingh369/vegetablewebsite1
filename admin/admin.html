@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Page</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f4f7fa;
+            font-family: 'Arial', sans-serif;
+        }
+        .navbar {
+            margin-bottom: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .form-group label {
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .list-group-item {
+            border: none;
+            border-bottom: 1px solid #ddd;
+        }
+        .card-title {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        #totalIncome {
+            font-size: 2.5em;
+            color: #28a745;
+        }
+        .filter-input {
+            margin-bottom: 10px;
+        }
+        .sort-select {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Admin Dashboard</a>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        Add/Edit Vegetable
+                    </div>
+                    <div class="card-body">
+                        <form id="vegetableForm">
+                            <div class="form-group">
+                                <label for="vegetableName">Vegetable Name</label>
+                                <input type="text" class="form-control" id="vegetableName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="vegetablePrice">Price</label>
+                                <input type="number" class="form-control" id="vegetablePrice" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Vegetable</button>
+                            <input type="hidden" id="vegetableId">
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        Vegetable List
+                    </div>
+                    <div class="card-body">
+                        <input type="text" class="form-control filter-input" id="filterInput" placeholder="Filter vegetables...">
+                        <select class="form-control sort-select" id="sortSelect">
+                            <option value="">Sort by</option>
+                            <option value="nameAsc">Name: A-Z</option>
+                            <option value="nameDesc">Name: Z-A</option>
+                            <option value="priceAsc">Price: Low to High</option>
+                            <option value="priceDesc">Price: High to Low</option>
+                        </select>
+                        <ul class="list-group" id="vegetableList">
+                            <!-- Vegetable items will be appended here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        Users List
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group" id="userList">
+                            <!-- User items will be appended here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        Total Income
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title" id="totalIncome">$0</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchVegetables() {
+            try {
+                const response = await fetch('http://localhost:5000/vegetables');
+                const vegetables = await response.json();
+                renderVegetables(vegetables);
+            } catch (error) {
+                console.error('Error fetching vegetables:', error);
+            }
+        }
+
+        async function addOrUpdateVegetable(vegetableData) {
+            const url = vegetableData.id ? `http://localhost:5000/vegetables/${vegetableData.id}` : 'http://localhost:5000/vegetables';
+            const method = vegetableData.id ? 'PUT' : 'POST';
+            
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(vegetableData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to save vegetable');
+                }
+
+                fetchVegetables();
+                document.getElementById('vegetableForm').reset();
+            } catch (error) {
+                console.error('Error saving vegetable:', error);
+            }
+        }
+
+        async function deleteVegetable(vegetableId) {
+            try {
+                const response = await fetch(`http://localhost:5000/vegetables/${vegetableId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete vegetable');
+                }
+
+                fetchVegetables();
+            } catch (error) {
+                console.error('Error deleting vegetable:', error);
+            }
+        }
+
+        function renderVegetables(vegetables) {
+            const vegetableList = document.getElementById('vegetableList');
+            vegetableList.innerHTML = '';
+
+            vegetables.forEach(vegetable => {
+                const li = document.createElement('li');
+                li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+                li.innerHTML = `
+                    <span>${vegetable.name} - $${vegetable.price}</span>
+                    <div>
+                        <button class="btn btn-sm btn-info" onclick="editVegetable(${vegetable.id})">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteVegetable(${vegetable.id})">Delete</button>
+                    </div>
+                `;
+                vegetableList.appendChild(li);
+            });
+        }
+
+        function editVegetable(vegetableId) {
+            // Fetch vegetable by id and populate form for editing
+            // Implementation depends on your preference
+        }
+
+        document.getElementById('vegetableForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const vegetableName = document.getElementById('vegetableName').value;
+            const vegetablePrice = document.getElementById('vegetablePrice').value;
+            const vegetableId = document.getElementById('vegetableId').value;
+
+            addOrUpdateVegetable({ id: vegetableId, name: vegetableName, price: vegetablePrice });
+        });
+
+        document.getElementById('filterInput').addEventListener('input', function(event) {
+            // Implement filtering based on user input
+        });
+
+        document.getElementById('sortSelect').addEventListener('change', function(event) {
+            // Implement sorting based on user selection
+        });
+
+        // Initial fetch of vegetables when page loads
+        fetchVegetables();
+    </script>
+</body>
+</html>
